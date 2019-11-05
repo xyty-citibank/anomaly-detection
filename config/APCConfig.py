@@ -34,12 +34,12 @@ data = dict(
     videos_per_gpu=8,
     train=dict(
         type=dataset_type,
-        ann_file='',
+        ann_file=None,
         img_prefix=data_root,
         img_norm_cfg=img_norm_cfg,
-        image_tmpl='img_{:05d}.jpg',
-        img_scale=256,
-        input_size=224,
+        scale_size=(3, 256, 256),
+        num_pred=1,
+        time_steps=4
     ),
     val=dict(),
     test=dict(),
