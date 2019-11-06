@@ -63,7 +63,7 @@ class GANLoss(nn.Module):
                 loss = prediction.mean()
         return loss
 
-
+@torch.no_grad()
 class GradientLoss(nn.Module):
     def __init__(self, alpha):
         super(GradientLoss, self).__init__()

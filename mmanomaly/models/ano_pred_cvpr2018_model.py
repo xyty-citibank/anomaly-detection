@@ -1,6 +1,7 @@
 from mmanomaly.models.g_d_networks import *
 from mmanomaly.models.loss import GANLoss, GradientLoss
 from mmanomaly.models.base_model import BaseModel
+from mmanomaly.FlowNetPytorch.flownet import FlowNet
 """
 This class implements the ano_pred_cvpr2018 model, the paper's url:1712.09867.pdf
 """
@@ -10,28 +11,30 @@ class APCModel(BaseModel):
         self.opt = opt
         self.generator = UNetGenerator()
         self.discriminator = NLayerDiscriminator()
-        self.flownet = None
+        self.flownet = FlowNet(opt.train.flownet_pretrained)
         self.loss = GANLoss(opt.gan_mode)
         self.l1loss = nn.L1Loss()
         self.l2loss = nn.MSELoss()
         self.gradientloss = GradientLoss(opt.alpha)
-
-
+        self.batch_size = opt.gpus * opt.data.videos_per_gpu
+        self.num_pred = opt.data.train.num_pred,
+        self.time_steps = opt.data.train.time_steps
+        self.c, self.w, self.h = opt.data.train.scale_size
 
     def forward(self, input):
-        self.real_A, self.real_B, self.real_C = input
-        self.fake_C = self.generator(self.real_B)
-        self.real_f_C = self.flownet(self.real_C)
-        self.fake_f_C = self.flownet(self.fake_C)
+        input = input.resize(self.batch_size, self.w, self.h, self.c * (self.time_steps * self.num_pred))
+        self.g_t = input[..., self.c * self.time_steps]
+        self.g_t_1 = input[..., self.c * self.num_pred]
+        self.p_t_1 = self.generator(self.g_t)
+        self.real_f = self.flownet([self.g_t, self.g_t_1])
+        self.fake_f = self.flownet([self.g_t, self.p_t_1])
 
     def backward_D(self):
         loss = dict()
         self.set_requires_grad(self.discriminator, True)
-        fake_AC = torch.cat((self.real_A, self.fake_C), 1)
-        pred_fake = self.discriminator(fake_AC.detach())
+        pred_fake = self.discriminator(self.p_t_1.detach())
         loss_D_fake = self.loss(pred_fake, False)
-        real_AC = torch.cat((self.real_A, self.real_C), 1)
-        pred_real = self.discriminator(real_AC)
+        pred_real = self.discriminator(self.g_t_1)
         loss_D_real = self.loss(pred_real, True)
         loss_D = (loss_D_fake + loss_D_real) * 0.5
         loss.update(loss_D)
@@ -40,12 +43,11 @@ class APCModel(BaseModel):
     def backward_G(self):
         loss = dict()
         self.set_requires_grad(self.discriminator, False)
-        fake_AC = torch.cat((self.real_A, self.fake_C), 1)
-        pred_fake = self.discriminator(fake_AC)
+        pred_fake = self.discriminator(self.p_t_1)
         loss_G_GAN = self.loss(pred_fake, True)
-        loss_int = self.l2loss(self.fake_C, self.real_C)
-        loss_gd = self.gradientloss([self.fake_C, self.real_C])
-        loss_OP = self.l1loss(self.real_f_C, self.fake_f_C)
+        loss_int = self.l2loss(self.p_t_1, self.g_t_1)
+        loss_gd = self.gradientloss([self.p_t_1, self.g_t_1])
+        loss_OP = self.l1loss(self.real_f, self.fake_f)
         loss_G = self.opt.lambda_int * loss_int + self.opt.lambda_gd * loss_gd + \
                  self.opt.lambda_op * loss_OP + self.opt.lambda_adv * loss_G_GAN
         loss.update(loss_G)

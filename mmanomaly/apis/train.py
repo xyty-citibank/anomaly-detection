@@ -8,7 +8,7 @@ from collections import OrderedDict
 import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import DistSamplerSeedHook, Runner, obj_from_dict
-
+from mmanomaly.datasets.loader import build_dataloader
 
 from .env import get_root_logger
 

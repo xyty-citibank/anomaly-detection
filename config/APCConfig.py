@@ -18,6 +18,8 @@ train_cfg = dict(
     ganmodel=None,
     lr=None,
     start_epoch=0,
+    flownet_pretrained='',
+
 
 
 )
@@ -32,6 +34,7 @@ img_norm_cfg = dict()
 
 data = dict(
     videos_per_gpu=8,
+    workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         ann_file=None,

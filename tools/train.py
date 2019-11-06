@@ -76,7 +76,7 @@ def main():
         logger.info('Set random seed to {}'.format(args.seed))
         set_random_seed(args.seed)
 
-    model = APCModel(cfg.model)
+    model = APCModel(cfg)
 
     datasets = VideoDataset(cfg.data.train)
     train_detector(

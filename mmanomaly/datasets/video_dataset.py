@@ -47,7 +47,7 @@ class VideoDataset(Dataset):
                 mmcv.imread(os.path.join(v_dir, i)) for i \
                                 in frame_clip).unsqueeze(0).resize(1, c, w, h)], 1)
 
-        return item, frames
+        return frames
 
 
 
