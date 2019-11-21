@@ -60,6 +60,7 @@ def main():
         # apply the linear scaling rule (https://arxiv.org/abs/1706.02677)
         cfg.optimizer['lr'] = cfg.optimizer['lr'] * cfg.gpus / 8
 
+
     # init distributed env first, since logger depends on the dist info.
     if args.launcher == 'none':
         distributed = False
@@ -78,7 +79,7 @@ def main():
 
     model = APCModel(cfg)
 
-    datasets = VideoDataset(cfg.data.train)
+    datasets = VideoDataset(cfg)
     train_detector(
         model,
         datasets,

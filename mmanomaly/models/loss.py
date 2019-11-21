@@ -1,7 +1,7 @@
 
 import torch
+import numpy as np
 import torch.nn as nn
-
 
 class GANLoss(nn.Module):
     """Define different GAN objectives.
@@ -63,7 +63,7 @@ class GANLoss(nn.Module):
                 loss = prediction.mean()
         return loss
 
-@torch.no_grad()
+
 class GradientLoss(nn.Module):
     def __init__(self, alpha):
         super(GradientLoss, self).__init__()
@@ -71,20 +71,26 @@ class GradientLoss(nn.Module):
         self.conv2d_h = nn.Conv2d(3, 3, (2, 1))
         self.alpha = alpha
         self.init_weights()
+        for p in self.parameters():
+            p.requires_grad = False
     def forward(self, input):
         fake_C, real_C = input
         gen_dw = torch.abs(self.conv2d_w(fake_C))
         gen_dh = torch.abs(self.conv2d_h(fake_C))
         gt_dw = torch.abs(self.conv2d_w(real_C))
         gt_dh = torch.abs(self.conv2d_h(real_C))
-
         grad_diff_w = torch.abs(gt_dw - gen_dw)
         grad_diff_h = torch.abs(gt_dh - gen_dh)
-
-        return torch.mean(grad_diff_w ** self.alpha + grad_diff_h ** self.alpha)
+        return torch.mean(grad_diff_w ** self.alpha) + torch.mean(grad_diff_h ** self.alpha)
     def init_weights(self):
-        self.conv2d_w.weight = torch.Tensor([1, -1])
-        self.conv2d_h.weight = torch.Tensor([[1], [-1]])
+        w_p = np.ones([3, 3, 1, 2])
+        h_p = np.ones([3, 3, 2, 1])
+        w_p[:, :, :, 1] = -1
+        h_p[:, :, 1, :] = -1
+        w_p = torch.Tensor(w_p).float()
+        h_p = torch.Tensor(h_p).float()
+        self.conv2d_w.weight = torch.nn.Parameter(w_p)
+        self.conv2d_h.weight = torch.nn.Parameter(h_p)
 
 
 

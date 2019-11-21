@@ -7,40 +7,34 @@ from collections import OrderedDict
 
 import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import DistSamplerSeedHook, Runner, obj_from_dict
+from mmcv.runner import DistSamplerSeedHook, obj_from_dict
 from mmanomaly.datasets.loader import build_dataloader
 
 from .env import get_root_logger
+from mmanomaly.apis.runner import MyRunner
 
-
-def parse_losses(losses):
-    log_vars = OrderedDict()
-    for loss_name, loss_value in losses.items():
-        if isinstance(loss_value, torch.Tensor):
-            log_vars[loss_name] = loss_value.mean()
-        elif isinstance(loss_value, list):
-            log_vars[loss_name] = sum(_loss.mean() for _loss in loss_value)
-        else:
-            raise TypeError(
-                '{} is not a tensor or list of tensors'.format(loss_name))
-
-    loss = [_value for _key, _value in log_vars.items() if 'loss' in _key]
-
-    log_vars['loss'] = loss
+def parse_losses(losses, epoch):
+    losses_G, losses_D = losses
+    log_vars = dict(losses_G, **losses_D)
     for name in log_vars:
         log_vars[name] = log_vars[name].item()
+    if epoch % 3 == 0:
+        loss = [losses_D['loss_D'], losses_G['loss_G']]
+    else:
+        loss = [losses_D['loss_D']]
+
 
     return loss, log_vars
 
 
-def batch_processor(model, data, train_mode):
-    _ = model(**data)
-    loss_G = model.backward_G()
-    loss_D = model.backward_D()
-    loss, log_vars = parse_losses([loss_G, loss_D])
+def batch_processor(model, data, train_mode, epoch=0):
+    _ = model(data)
+    loss_G = model.module.backward_G()
+    loss_D = model.module.backward_D()
+    loss, log_vars = parse_losses([loss_G, loss_D], epoch)
 
     outputs = dict(
-        loss=loss, log_vars=log_vars, num_samples=len(data['img'].data))
+        loss=loss, log_vars=log_vars, num_samples=8)
 
     return outputs
 
@@ -152,7 +146,7 @@ def _non_dist_train(model, dataset, cfg, validate=False):
     data_loaders = [
         build_dataloader(
             ds,
-            cfg.data.imgs_per_gpu,
+            cfg.data.videos_per_gpu,
             cfg.data.workers_per_gpu,
             cfg.gpus,
             dist=False) for ds in dataset
@@ -161,8 +155,12 @@ def _non_dist_train(model, dataset, cfg, validate=False):
     model = MMDataParallel(model, device_ids=range(cfg.gpus)).cuda()
 
     # build runner
-    optimizer = build_optimizer(model, cfg.optimizer)
-    runner = Runner(model, batch_processor, optimizer, cfg.work_dir,
+    optimizers = []
+    opt_dict = cfg.optimizer
+    for opt in opt_dict:
+        optimizer = build_optimizer(model, opt)
+        optimizers.append(optimizer)
+    runner = MyRunner(model, batch_processor, optimizers, cfg.work_dir,
                     cfg.log_level)
 
     optimizer_config = cfg.optimizer_config
