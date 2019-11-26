@@ -10,6 +10,7 @@ import os
 import copy
 import numpy as np
 import cv2
+import random
 """
 This class implements the ano_pred_cvpr2018 model, the paper's url:1712.09867.pdf
 """
@@ -43,11 +44,23 @@ class APCModel(BaseModel):
 
 
     def backward_D(self):
+        fake = round(random.uniform(0.0, 0.1), 1)
+        real = round(random.uniform(0.9, 1.0), 1)
+        # fake = 0.0
+        # real = 1.0
+        # label
+        threashold = random.uniform(0.0, 1.0)
+        if threashold < 0.05:
+            r_fake = real
+            f_real = fake
+        else:
+            r_fake = fake
+            f_real = real
         self.set_requires_grad(self.discriminator, True)
         pred_fake = self.discriminator(self.p_t_1.detach())
-        loss_D_fake = self.loss(pred_fake, False)
+        loss_D_fake = self.loss(pred_fake, r_fake)
         pred_real = self.discriminator(self.g_t_1)
-        loss_D_real = self.loss(pred_real, True)
+        loss_D_real = self.loss(pred_real, f_real)
         loss_D = (loss_D_fake + loss_D_real) * 0.5
 
 
@@ -59,10 +72,8 @@ class APCModel(BaseModel):
             for i in range(0, b_s):
                 img_g = self.g_t_1[i].squeeze(0).cpu().permute(1, 2, 0).numpy()
                 img_p = self.p_t_1[i].squeeze(0).detach().cpu().permute(1, 2, 0).numpy()
-                img_g = mmcv.imdenormalize(img_g, 0, 1)
-                img_g = mmcv.imdenormalize(img_g, 0, 255)
-                img_p = mmcv.imdenormalize(img_p, 0, 1)
-                img_p = mmcv.imdenormalize(img_p, 0, 255)
+                img_g = mmcv.imdenormalize(img_g, 127.5, 127.5, to_bgr=False)
+                img_p = mmcv.imdenormalize(img_p, 127.5, 127.5, to_bgr=False)
                 img = np.hstack([img_g, img_p])
                 if big_img is None:
                     big_img = img
@@ -84,9 +95,11 @@ class APCModel(BaseModel):
 
         return {'loss_D': loss_D}
     def backward_G(self):
+        # real = round(random.uniform(0.9, 1.0), 1)
+        real = 1.0
         self.set_requires_grad(self.discriminator, False)
         pred_fake = self.discriminator(self.p_t_1)
-        loss_G_GAN = self.loss(pred_fake, True) * 0.5
+        loss_G_GAN = self.loss(pred_fake, real) * 0.5
         loss_int = self.l2loss(self.p_t_1, self.g_t_1)
         loss_gd = self.gradientloss([self.p_t_1, self.g_t_1])
         loss_OP = self.l1loss(self.real_f, self.fake_f)

@@ -9,7 +9,7 @@ class GANLoss(nn.Module):
     that has the same size as the input.
     """
 
-    def __init__(self, gan_mode, target_real_label=1.0, target_fake_label=0.0):
+    def __init__(self, gan_mode):
         """ Initialize the GANLoss class.
         Parameters:
             gan_mode (str) - - the type of GAN objective. It currently supports vanilla, lsgan, and wgangp.
@@ -19,8 +19,6 @@ class GANLoss(nn.Module):
         LSGAN needs no sigmoid. vanilla GANs will handle it with BCEWithLogitsLoss.
         """
         super(GANLoss, self).__init__()
-        self.register_buffer('real_label', torch.tensor(target_real_label))
-        self.register_buffer('fake_label', torch.tensor(target_fake_label))
         self.gan_mode = gan_mode
         if gan_mode == 'lsgan':
             self.loss = nn.MSELoss()
@@ -30,22 +28,8 @@ class GANLoss(nn.Module):
             self.loss = None
         else:
             raise NotImplementedError('gan mode %s not implemented' % gan_mode)
-    def get_target_tensor(self, prediction, target_is_real):
-        """Create label tensors with the same size as the input.
-        Parameters:
-            prediction (tensor) - - tpyically the prediction from a discriminator
-            target_is_real (bool) - - if the ground truth label is for real images or fake images
-        Returns:
-            A label tensor filled with ground truth label, and with the size of the input
-        """
 
-        if target_is_real:
-            target_tensor = self.real_label
-        else:
-            target_tensor = self.fake_label
-        return target_tensor.expand_as(prediction)
-
-    def __call__(self, prediction, target_is_real):
+    def __call__(self, prediction, target):
         """Calculate loss given Discriminator's output and grount truth labels.
         Parameters:
             prediction (tensor) - - tpyically the prediction output from a discriminator
@@ -54,10 +38,11 @@ class GANLoss(nn.Module):
             the calculated loss.
         """
         if self.gan_mode in ['lsgan', 'vanilla']:
-            target_tensor = self.get_target_tensor(prediction, target_is_real)
+            target_tensor = torch.tensor(target).cuda()
+            target_tensor = target_tensor.expand_as(prediction)
             loss = self.loss(prediction, target_tensor)
         elif self.gan_mode == 'wgangp':
-            if target_is_real:
+            if target:
                 loss = -prediction.mean()
             else:
                 loss = prediction.mean()

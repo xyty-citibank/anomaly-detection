@@ -23,7 +23,10 @@ class VideoDataset(Dataset):
         self.num_pred = cfg.data.train.num_pred
         self.input_size = cfg.data.train.scale_size
         self.img_norm_cfg = cfg.img_norm_cfg
-        self.transform = GroupImageTransform()
+        self.mean = cfg.img_norm_cfg['mean']
+        self.std = cfg.img_norm_cfg['std']
+        self.to_rgb = cfg.img_norm_cfg['to_rgb']
+        self.transform = GroupImageTransform(mean=self.mean, std=self.std, to_rgb=self.to_rgb)
 
     def __len__(self):
         return len(self.v_name_list)
@@ -45,7 +48,7 @@ class VideoDataset(Dataset):
             for i in frame_clip:
                 frame_arr.append(mmcv.imread(os.path.join(v_dir, i)))
 
-            frames, img_shape, pad_shape, scale_factor, crop_quadruple = self.transform(frame_arr, (w, h), keep_ratio=False, div_255=True)
+            frames, img_shape, pad_shape, scale_factor, crop_quadruple = self.transform(frame_arr, (w, h), keep_ratio=False, div_255=False)
             frames = to_tensor(frames)
             size = len(frame_clip)
             frames = frames.reshape(c * size, w, h)

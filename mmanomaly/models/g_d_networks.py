@@ -13,9 +13,9 @@ class UNetGenerator(nn.Module):
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
-        self.up1 = Up(768, 256, bilinear)
-        self.up2 = Up(384, 128, bilinear)
-        self.up3 = Up(192, 64, bilinear)
+        self.up1 = Up(512, 256)
+        self.up2 = Up(256, 128)
+        self.up3 = Up(128, 64)
         self.outc = OutConv(64, 3)
         self.tanh = nn.Tanh()
 

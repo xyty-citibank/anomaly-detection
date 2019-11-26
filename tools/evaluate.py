@@ -1,7 +1,3 @@
-
-
-
-
 import numpy as np
 import scipy.io as scio
 import os
@@ -13,7 +9,7 @@ import socket
 
 
 # data folder contain all datasets, such as ped1, ped2, avenue, shanghaitech, etc
-DATA_DIR = '../Data'
+DATA_DIR = '/vdata/dataset/avenue'
 # hostname = socket.gethostname()
 # if hostname == 'dl-T8520-G10':  # 119
 #     DATA_DIR = '/home/liuwen/ssd/datasets'
@@ -255,7 +251,7 @@ def load_psnr_gt(loss_file):
 
     # load ground truth
     gt_loader = GroundTruthLoader()
-    gt = gt_loader(dataset=dataset)
+    gt = gt_loader('avenue')
 
     assert num_videos == len(gt), 'the number of saved videos does not match the ground truth, {} != {}' \
         .format(num_videos, len(gt))
@@ -565,9 +561,10 @@ def evaluate(eval_type, save_file):
 
 if __name__ == '__main__':
     args = parser_args()
+    pickle_path = '../result/Avenue.pkl'
 
-    eval_type = args.type
-    file_path = args.file
+    eval_type = 'compute_auc'
+    file_path = pickle_path
 
     print('Evaluate type = {}'.format(eval_type))
     print('File path = {}'.format(file_path))

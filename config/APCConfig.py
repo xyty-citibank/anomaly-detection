@@ -31,12 +31,13 @@ test_cfg = dict(
 
 )
 
-dataset_type = 'Avenue'
-data_root = '/vdata/dataset/Avenue_Dataset/training_rawframes'
+dataset_type = 'subway'
+# data_root = '/vdata/dataset/Avenue_Dataset/training_rawframes'
+data_root = '/vdata/dataset/events/subway_entrance/train/train_rawframes'
 img_norm_cfg = dict(
-   mean=[104, 117, 128], std=[1, 1, 1], to_rgb=False)
+   mean=(127.5, 127.5, 127.5), std=(127.5, 127.5, 127.5), to_rgb=True)
 data = dict(
-    videos_per_gpu=8,
+    videos_per_gpu=6,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -73,7 +74,7 @@ lr_config = dict(
     warmup=None,
     warmup_iters=500,
     warmup_ratio=1.0 / 3,
-    step=[1, 4])
+    step=[20000, 100000])
 
 checkpoint_config = dict(
     interval=1000,
@@ -84,9 +85,9 @@ log_config = dict(
     hooks=[
         dict(type='MyTextLoggerHook'),
     ])
-total_epochs = 500000
+total_epochs = 200000
 
-work_dir = './work_dirs/ano_pred_cvpr2018_model_Adam_tanh_0.0002_0.0002'
+work_dir = './work_dirs/ano_pred_cvpr2018_model_subway_entrance'
 log_level = 'INFO'
 load_from = None
 resume_from = None

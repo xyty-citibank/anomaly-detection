@@ -68,7 +68,10 @@ class MyLrUpdaterHook(Hook):
             return
         i = 0
         for optimizer in runner.optimizer:
-            self.regular_lr.append(self.get_regular_lr(optimizer, i, runner))
+            if len(self.regular_lr) < i + 1:
+                self.regular_lr.append(self.get_regular_lr(optimizer, i, runner))
+            else:
+                self.regular_lr[i] = self.get_regular_lr(optimizer, i, runner)
             self._set_lr(optimizer, self.regular_lr[i])
             i += 1
 
